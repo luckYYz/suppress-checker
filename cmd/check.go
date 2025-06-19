@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"suppress-checker/pkg/auditor"
 	"suppress-checker/pkg/interfaces"
+	"suppress-checker/pkg/models"
 	"suppress-checker/pkg/notifier"
 	"suppress-checker/pkg/parser"
 	"suppress-checker/pkg/scanner"
@@ -18,15 +19,15 @@ import (
 )
 
 var (
-	checkDir         string
-	checkDryRun      bool
-	checkTeams       bool
-	checkOutputJSON  bool
-	checkOutputFile  string
-	checkExclude     []string
-	checkInclude     []string
-	checkNotifiers   []string
-	checkValidators  []string
+	checkDir        string
+	checkDryRun     bool
+	checkTeams      bool
+	checkOutputJSON bool
+	checkOutputFile string
+	checkExclude    []string
+	checkInclude    []string
+	checkNotifiers  []string
+	checkValidators []string
 )
 
 // checkCmd represents the check command
@@ -204,7 +205,7 @@ func outputResults(report interface{}) error {
 // printSummary prints a human-readable summary of the audit results
 func printSummary(report interface{}) {
 	// Type assertion to get the actual report
-	if auditReport, ok := report.(*AuditReport); ok {
+	if auditReport, ok := report.(*models.AuditReport); ok {
 		fmt.Printf("\n📊 Audit Summary\n")
 		fmt.Printf("================\n")
 		fmt.Printf("Files scanned: %d\n", auditReport.TotalFiles)
@@ -242,54 +243,3 @@ func contains(slice []string, item string) bool {
 	}
 	return false
 }
-
-// AuditReport represents the audit report structure for the summary
-// This is a simplified version for display purposes
-type AuditReport struct {
-	TotalFiles        int                  `json:"totalFiles"`
-	TotalSuppressions int                  `json:"totalSuppressions"`
-	Issues            []ValidationIssue    `json:"issues"`
-	Timestamp         time.Time            `json:"timestamp"`
-}
-
-// ValidationIssue represents a validation issue
-type ValidationIssue struct {
-	Type        string      `json:"type"`
-	Suppression Suppression `json:"suppression"`
-	Message     string      `json:"message"`
-	Severity    string      `json:"severity"`
-}
-
-// Suppression represents a suppression entry
-type Suppression struct {
-	Vulnerability string `json:"vulnerability"`
-	FilePath      string `json:"filePath"`
-	LineNumber    int    `json:"lineNumber"`
-}
-
-// HasIssues returns true if there are any issues
-func (r *AuditReport) HasIssues() bool {
-	return len(r.Issues) > 0
-}
-
-// ErrorCount returns the number of error-level issues
-func (r *AuditReport) ErrorCount() int {
-	count := 0
-	for _, issue := range r.Issues {
-		if issue.Severity == "error" {
-			count++
-		}
-	}
-	return count
-}
-
-// WarningCount returns the number of warning-level issues
-func (r *AuditReport) WarningCount() int {
-	count := 0
-	for _, issue := range r.Issues {
-		if issue.Severity == "warning" {
-			count++
-		}
-	}
-	return count
-} 

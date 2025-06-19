@@ -1,0 +1,28 @@
+name: Example Usage
+
+on:
+  pull_request:
+  schedule:
+    - cron: '0 9 * * 1'  # Every Monday at 9 AM
+
+jobs:
+  suppress-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Check suppressions
+        uses: ./  # Use local action for testing
+        with:
+          directory: '.'
+          verbose: true
+          output-json: true
+          output-file: 'suppression-report.json'
+      
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: suppression-report
+          path: suppression-report.json 

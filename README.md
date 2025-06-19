@@ -2,9 +2,9 @@
 
 A lightweight Go CLI tool to detect stale or forgotten vulnerability suppressions in files like `.tryvi-ignore`. Designed to be CI/CD-friendly and notify teams via **Microsoft Teams**.
 
-![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)
-![Go Version](https://img.shields.io/badge/go-1.23-blue.svg)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
+[![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-Available-blue?logo=github-actions)](https://github.com/marketplace/actions/suppress-checker)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/your-org/suppress-checker)](https://golang.org/)
+[![License](https://img.shields.io/github/license/your-org/suppress-checker)](LICENSE)
 
 ## 🏗️ Modular Architecture
 
@@ -323,3 +323,246 @@ This architecture provides:
 ---
 
 **Built with ❤️ for vulnerability management hygiene** 
+
+# Suppress Checker
+
+[![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-Available-blue?logo=github-actions)](https://github.com/marketplace/actions/suppress-checker)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/your-org/suppress-checker)](https://golang.org/)
+[![License](https://img.shields.io/github/license/your-org/suppress-checker)](LICENSE)
+
+A GitHub Action that automatically checks for expired or stale security suppressions in your codebase. Never let temporary security bypasses become permanent risks!
+
+## 🚀 Quick Start
+
+Add this to your `.github/workflows/security-check.yml`:
+
+```yaml
+name: Security Suppression Check
+
+on:
+  pull_request:
+  schedule:
+    - cron: '0 9 * * 1'  # Every Monday at 9 AM
+
+jobs:
+  suppress-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check suppressions
+        uses: actions/suppress-checker@v1
+        with:
+          directory: '.'
+          verbose: true
+          output-json: true
+          output-file: 'suppression-report.json'
+```
+
+## 📋 Supported Suppression Formats
+
+- **OWASP Dependency Check**: `dependency-check-suppressions.xml`, `owasp-suppressions.xml`
+- **SonarQube**: `suppressions.xml`
+- **Tryvi**: `.tryvi-ignore`
+- **Generic**: `.suppress-ignore`
+
+## ⚙️ Configuration
+
+| Input | Description | Required | Default |
+|-------|-------------|----------|---------|
+| `directory` | Directory to scan for suppression files | No | `.` |
+| `verbose` | Enable verbose output | No | `false` |
+| `output-json` | Output results in JSON format | No | `false` |
+| `output-file` | File to write JSON output to | No | `` |
+| `teams-webhook` | Microsoft Teams webhook URL for notifications | No | `` |
+| `dry-run` | Run in dry-run mode (no external calls) | No | `false` |
+| `fail-on-warnings` | Fail the action if warnings are found | No | `false` |
+| `grace-period` | Grace period in days before suppressions expire | No | `30` |
+
+## 📊 Outputs
+
+| Output | Description |
+|--------|-------------|
+| `total-files` | Number of suppression files scanned |
+| `total-suppressions` | Total number of suppressions found |
+| `errors-found` | Number of errors found |
+| `warnings-found` | Number of warnings found |
+| `report-file` | Path to the generated report file |
+
+## 🔧 Advanced Usage
+
+### Pull Request Comments
+
+The action automatically comments on pull requests with suppression check results:
+
+```yaml
+- name: Check suppressions
+  uses: actions/suppress-checker@v1
+  with:
+    directory: '.'
+    output-json: true
+    output-file: 'suppression-report.json'
+```
+
+### Teams Notifications
+
+Send notifications to Microsoft Teams:
+
+```yaml
+- name: Check suppressions
+  uses: actions/suppress-checker@v1
+  with:
+    teams-webhook: ${{ secrets.TEAMS_WEBHOOK }}
+    dry-run: false
+```
+
+### Fail on Warnings
+
+Make the action fail if any warnings are found:
+
+```yaml
+- name: Check suppressions
+  uses: actions/suppress-checker@v1
+  with:
+    fail-on-warnings: true
+    grace-period: 14
+```
+
+### Using Outputs
+
+Access the action outputs in subsequent steps:
+
+```yaml
+- name: Check suppressions
+  id: suppress-check
+  uses: actions/suppress-checker@v1
+  with:
+    output-json: true
+
+- name: Upload report
+  if: steps.suppress-check.outputs.errors-found > 0
+  uses: actions/upload-artifact@v4
+  with:
+    name: suppression-report
+    path: ${{ steps.suppress-check.outputs.report-file }}
+```
+
+## 📝 Example Workflows
+
+### Basic Security Check
+
+```yaml
+name: Security Check
+
+on: [push, pull_request]
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/suppress-checker@v1
+```
+
+### Comprehensive Monitoring
+
+```yaml
+name: Security Monitoring
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # Weekly
+  pull_request:
+    paths:
+      - '**/*suppress*'
+      - '**/suppressions.xml'
+      - '**/dependency-check-suppressions.xml'
+      - '**/owasp-suppressions.xml'
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Comprehensive suppression check
+        uses: actions/suppress-checker@v1
+        with:
+          directory: '.'
+          verbose: true
+          output-json: true
+          output-file: 'security-report.json'
+          teams-webhook: ${{ secrets.TEAMS_WEBHOOK }}
+          grace-period: 21
+          fail-on-warnings: true
+      
+      - name: Archive security report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-report
+          path: security-report.json
+          retention-days: 90
+```
+
+## 🏗️ Development
+
+### Building Locally
+
+```bash
+# Build the binary
+make build
+
+# Run tests  
+make test
+
+# Build Docker image
+docker build -t suppress-checker .
+
+# Test locally
+docker run --rm -v $(pwd):/workspace suppress-checker
+```
+
+### CLI Usage
+
+```bash
+# Check current directory
+./suppress-checker check
+
+# Check specific directory with options
+./suppress-checker check --dir ./src --verbose --output-json
+
+# Show version
+./suppress-checker version
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🔍 How It Works
+
+The action scans your repository for suppression files and checks:
+
+- ✅ **Expiration dates** - Are suppressions past their intended end date?
+- ✅ **Stale suppressions** - Have suppressions been around too long without review?
+- ✅ **Missing justifications** - Do suppressions have proper documentation?
+- ✅ **CVE status** - Are suppressed vulnerabilities still relevant?
+
+## 📞 Support
+
+- 🐛 [Report Issues](https://github.com/your-org/suppress-checker/issues)
+- 💡 [Feature Requests](https://github.com/your-org/suppress-checker/discussions)
+- 📖 [Documentation](https://github.com/your-org/suppress-checker/wiki)
+
+---
+
+Made with ❤️ for secure codebases 

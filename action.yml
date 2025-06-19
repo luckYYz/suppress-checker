@@ -1,0 +1,76 @@
+name: 'Suppress Checker'
+description: 'Check for expired or stale security suppressions in your codebase'
+author: 'suppress-checker'
+branding:
+  icon: 'shield'
+  color: 'red'
+
+inputs:
+  directory:
+    description: 'Directory to scan for suppression files'
+    required: false
+    default: '.'
+  
+  verbose:
+    description: 'Enable verbose output'
+    required: false
+    default: 'false'
+  
+  output-json:
+    description: 'Output results in JSON format'
+    required: false
+    default: 'false'
+  
+  output-file:
+    description: 'File to write JSON output to'
+    required: false
+    default: ''
+  
+  teams-webhook:
+    description: 'Microsoft Teams webhook URL for notifications'
+    required: false
+    default: ''
+  
+  dry-run:
+    description: 'Run in dry-run mode (no external calls)'
+    required: false
+    default: 'false'
+  
+  fail-on-warnings:
+    description: 'Fail the action if warnings are found'
+    required: false
+    default: 'false'
+  
+  grace-period:
+    description: 'Grace period in days before suppressions are considered expired'
+    required: false
+    default: '30'
+
+outputs:
+  total-files:
+    description: 'Number of suppression files scanned'
+  
+  total-suppressions:
+    description: 'Total number of suppressions found'
+  
+  errors-found:
+    description: 'Number of errors found'
+  
+  warnings-found:
+    description: 'Number of warnings found'
+  
+  report-file:
+    description: 'Path to the generated report file (if output-json is enabled)'
+
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  env:
+    SUPPRESS_TEAMS_WEBHOOK: ${{ inputs.teams-webhook }}
+    INPUT_DIRECTORY: ${{ inputs.directory }}
+    INPUT_VERBOSE: ${{ inputs.verbose }}
+    INPUT_OUTPUT_JSON: ${{ inputs.output-json }}
+    INPUT_OUTPUT_FILE: ${{ inputs.output-file }}
+    INPUT_DRY_RUN: ${{ inputs.dry-run }}
+    INPUT_FAIL_ON_WARNINGS: ${{ inputs.fail-on-warnings }}
+    INPUT_GRACE_PERIOD: ${{ inputs.grace-period }} 
