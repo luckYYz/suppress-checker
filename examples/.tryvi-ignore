@@ -1,0 +1,18 @@
+- vulnerability: CVE-2024-1234
+  reason: false positive in transitive dependency - axios vulnerability not exploitable in our use case
+  ignoreUntil: 2025-06-01
+
+- vulnerability: CVE-2024-9876
+  reason: known issue, security team approved low risk
+  ignoreUntil: 2023-01-01
+
+- vulnerability: CVE-2024-5555
+  reason: temporary suppression pending vendor fix
+  ignoreUntil: 2024-12-31
+
+- vulnerability: CVE-2024-7777
+  reason: ""
+  ignoreUntil: 2025-03-15
+
+- vulnerability: CVE-2024-8888
+  reason: testing without expiry date 
