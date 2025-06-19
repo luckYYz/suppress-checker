@@ -189,61 +189,38 @@ func (n *TeamsNotifier) buildMainSection(report *models.AuditReport) TeamsSectio
 func (n *TeamsNotifier) buildIssuesSection(report *models.AuditReport) TeamsSection {
 	var text strings.Builder
 
-	// Group issues by type
-	expiredIssues := make([]models.ValidationIssue, 0)
-	missingReasonIssues := make([]models.ValidationIssue, 0)
-	missingDateIssues := make([]models.ValidationIssue, 0)
-	invalidDateIssues := make([]models.ValidationIssue, 0)
+	// Separate errors and warnings by severity
+	var errorIssues []models.ValidationIssue
+	var warningIssues []models.ValidationIssue
 
 	for _, issue := range report.Issues {
-		switch issue.Type {
-		case models.IssueTypeExpired:
-			expiredIssues = append(expiredIssues, issue)
-		case models.IssueTypeMissingReason:
-			missingReasonIssues = append(missingReasonIssues, issue)
-		case models.IssueTypeMissingDate:
-			missingDateIssues = append(missingDateIssues, issue)
-		case models.IssueTypeInvalidDate:
-			invalidDateIssues = append(invalidDateIssues, issue)
+		if issue.Severity == models.SeverityError {
+			errorIssues = append(errorIssues, issue)
+		} else if issue.Severity == models.SeverityWarning {
+			warningIssues = append(warningIssues, issue)
 		}
 	}
 
-	// Build markdown text for each issue type
-	if len(expiredIssues) > 0 {
-		text.WriteString("**🔴 Expired Suppressions:**\n\n")
-		for _, issue := range expiredIssues {
-			text.WriteString(fmt.Sprintf("• **%s** - %s\n", issue.Suppression.Vulnerability, issue.Message))
+	// Build errors section first
+	if len(errorIssues) > 0 {
+		text.WriteString("**Errors:**\n\n")
+		for _, issue := range errorIssues {
+			text.WriteString(fmt.Sprintf("• 🔴 **%s** - %s\n", issue.Suppression.Vulnerability, issue.Message))
 			text.WriteString(fmt.Sprintf("  *File:* %s\n\n", n.formatFilePath(issue.Suppression.FilePath)))
 		}
 	}
 
-	if len(missingDateIssues) > 0 {
-		text.WriteString("**🟡 Missing Expiry Dates:**\n\n")
-		for _, issue := range missingDateIssues {
-			text.WriteString(fmt.Sprintf("• **%s** - %s\n", issue.Suppression.Vulnerability, issue.Message))
+	// Add warnings section with separator
+	if len(warningIssues) > 0 {
+		if len(errorIssues) > 0 {
+			text.WriteString("\n") // Add separator between errors and warnings
+		}
+		text.WriteString("**Warnings:**\n\n")
+		for _, issue := range warningIssues {
+			text.WriteString(fmt.Sprintf("• 🟡 **%s** - %s\n", issue.Suppression.Vulnerability, issue.Message))
 			text.WriteString(fmt.Sprintf("  *File:* %s\n\n", n.formatFilePath(issue.Suppression.FilePath)))
 		}
 	}
-
-	if len(missingReasonIssues) > 0 {
-		text.WriteString("**🟠 Missing Reasons:**\n\n")
-		for _, issue := range missingReasonIssues {
-			text.WriteString(fmt.Sprintf("• **%s** - %s\n", issue.Suppression.Vulnerability, issue.Message))
-			text.WriteString(fmt.Sprintf("  *File:* %s\n\n", n.formatFilePath(issue.Suppression.FilePath)))
-		}
-	}
-
-	if len(invalidDateIssues) > 0 {
-		text.WriteString("**🔴 Invalid Date Formats:**\n\n")
-		for _, issue := range invalidDateIssues {
-			text.WriteString(fmt.Sprintf("• **%s** - %s\n", issue.Suppression.Vulnerability, issue.Message))
-			text.WriteString(fmt.Sprintf("  *File:* %s\n\n", n.formatFilePath(issue.Suppression.FilePath)))
-		}
-	}
-
-	text.WriteString("\n**Next Steps:**\n")
-	text.WriteString("Please review and update the identified suppressions. ")
-	text.WriteString("Expired suppressions should be re-evaluated or removed if no longer needed.")
 
 	return TeamsSection{
 		ActivityTitle: "📋 Issues Details",

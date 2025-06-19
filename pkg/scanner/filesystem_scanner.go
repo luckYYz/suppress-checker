@@ -11,7 +11,7 @@ import (
 
 // FileSystemScanner implements the Scanner interface for scanning the filesystem
 type FileSystemScanner struct {
-	supportedFiles []string
+	supportedFiles  []string
 	excludePatterns []string
 	includePatterns []string
 }
@@ -19,9 +19,15 @@ type FileSystemScanner struct {
 // NewFileSystemScanner creates a new filesystem scanner
 func NewFileSystemScanner(supportedFiles []string) *FileSystemScanner {
 	if len(supportedFiles) == 0 {
-		supportedFiles = []string{".tryvi-ignore", "suppressions.xml", ".suppress-ignore"}
+		supportedFiles = []string{
+			".tryvi-ignore",
+			"suppressions.xml",
+			"dependency-check-suppressions.xml",
+			"owasp-suppressions.xml",
+			".suppress-ignore",
+		}
 	}
-	
+
 	return &FileSystemScanner{
 		supportedFiles: supportedFiles,
 	}
@@ -45,18 +51,18 @@ func (s *FileSystemScanner) SetIncludePatterns(patterns []string) {
 // Scan recursively searches for suppression files in the given directory
 func (s *FileSystemScanner) Scan(ctx context.Context, rootDir string) ([]string, error) {
 	var foundFiles []string
-	
+
 	// Clean and validate root directory
 	absRootDir, err := filepath.Abs(rootDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get absolute path for %s: %w", rootDir, err)
 	}
-	
+
 	// Check if root directory exists
 	if _, err := os.Stat(absRootDir); os.IsNotExist(err) {
 		return nil, fmt.Errorf("directory does not exist: %s", absRootDir)
 	}
-	
+
 	err = filepath.WalkDir(absRootDir, func(path string, d os.DirEntry, err error) error {
 		// Check context cancellation
 		select {
@@ -64,12 +70,12 @@ func (s *FileSystemScanner) Scan(ctx context.Context, rootDir string) ([]string,
 			return ctx.Err()
 		default:
 		}
-		
+
 		if err != nil {
 			// Log error but continue scanning
 			return nil
 		}
-		
+
 		// Skip directories
 		if d.IsDir() {
 			// Check if we should skip this directory
@@ -78,20 +84,20 @@ func (s *FileSystemScanner) Scan(ctx context.Context, rootDir string) ([]string,
 			}
 			return nil
 		}
-		
+
 		// Check if this file matches our supported files
 		fileName := d.Name()
 		if s.isSupportedFile(fileName) && s.shouldIncludeFile(path) && !s.shouldExcludeFile(path) {
 			foundFiles = append(foundFiles, path)
 		}
-		
+
 		return nil
 	})
-	
+
 	if err != nil {
 		return nil, fmt.Errorf("error walking directory %s: %w", absRootDir, err)
 	}
-	
+
 	return foundFiles, nil
 }
 
@@ -114,14 +120,14 @@ func (s *FileSystemScanner) isSupportedFile(fileName string) bool {
 func (s *FileSystemScanner) shouldExcludeDir(dirPath string) bool {
 	// Common directories to exclude
 	commonExcludes := []string{".git", ".svn", ".hg", "node_modules", ".vscode", ".idea"}
-	
+
 	dirName := filepath.Base(dirPath)
 	for _, exclude := range commonExcludes {
 		if dirName == exclude {
 			return true
 		}
 	}
-	
+
 	// Check user-defined exclude patterns
 	for _, pattern := range s.excludePatterns {
 		if matched, _ := filepath.Match(pattern, dirPath); matched {
@@ -131,7 +137,7 @@ func (s *FileSystemScanner) shouldExcludeDir(dirPath string) bool {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -141,7 +147,7 @@ func (s *FileSystemScanner) shouldIncludeFile(filePath string) bool {
 	if len(s.includePatterns) == 0 {
 		return true
 	}
-	
+
 	for _, pattern := range s.includePatterns {
 		if matched, _ := filepath.Match(pattern, filePath); matched {
 			return true
@@ -150,7 +156,7 @@ func (s *FileSystemScanner) shouldIncludeFile(filePath string) bool {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
@@ -168,9 +174,9 @@ func (s *FileSystemScanner) shouldExcludeFile(filePath string) bool {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
 // Ensure FileSystemScanner implements the Scanner interface
-var _ interfaces.Scanner = (*FileSystemScanner)(nil) 
+var _ interfaces.Scanner = (*FileSystemScanner)(nil)

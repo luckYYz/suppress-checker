@@ -1,4 +1,4 @@
-# 🧼 Suppression Decay Checker
+# 🧼 Suppression Decay Checker [WORK-IN-PROGRESS]
 
 A lightweight Go CLI tool to detect stale or forgotten vulnerability suppressions in files like `.tryvi-ignore`. Designed to be CI/CD-friendly and notify teams via **Microsoft Teams**.
 

@@ -4,11 +4,28 @@ import "time"
 
 // Suppression represents a single suppression entry
 type Suppression struct {
-	Vulnerability string `yaml:"vulnerability"`
-	Reason        string `yaml:"reason"`
-	IgnoreUntil   string `yaml:"ignoreUntil"`
-	FilePath      string `yaml:"-"` // Internal field for tracking source file
-	LineNumber    int    `yaml:"-"` // Internal field for tracking position
+	// Common fields across all formats
+	Vulnerability string `yaml:"vulnerability" json:"vulnerability"`
+	Reason        string `yaml:"reason" json:"reason"`
+	IgnoreUntil   string `yaml:"ignoreUntil" json:"ignoreUntil"`
+	FilePath      string `yaml:"-" json:"filePath"`   // Internal field for tracking source file
+	LineNumber    int    `yaml:"-" json:"lineNumber"` // Internal field for tracking position
+	Format        string `yaml:"-" json:"format"`     // Format type: "tryvi", "owasp", "sonarqube", etc.
+
+	// OWASP-specific fields
+	CVE             string  `yaml:"-" json:"cve,omitempty"`
+	CPE             string  `yaml:"-" json:"cpe,omitempty"`
+	PackageURL      string  `yaml:"-" json:"packageUrl,omitempty"`
+	PackageURLRegex bool    `yaml:"-" json:"packageUrlRegex,omitempty"`
+	FilePathPattern string  `yaml:"-" json:"filePathPattern,omitempty"`
+	FilePathRegex   bool    `yaml:"-" json:"filePathRegex,omitempty"`
+	SHA1            string  `yaml:"-" json:"sha1,omitempty"`
+	GAV             string  `yaml:"-" json:"gav,omitempty"`
+	GAVRegex        bool    `yaml:"-" json:"gavRegex,omitempty"`
+	CVSSBelow       float64 `yaml:"-" json:"cvssBelow,omitempty"`
+	VulnName        string  `yaml:"-" json:"vulnerabilityName,omitempty"`
+	VulnNameRegex   bool    `yaml:"-" json:"vulnerabilityNameRegex,omitempty"`
+	Notes           string  `yaml:"-" json:"notes,omitempty"`
 }
 
 // SuppressionFile represents a parsed suppression file
@@ -30,10 +47,11 @@ type ValidationIssue struct {
 type IssueType string
 
 const (
-	IssueTypeExpired       IssueType = "expired"
-	IssueTypeMissingReason IssueType = "missing_reason"
-	IssueTypeMissingDate   IssueType = "missing_date"
-	IssueTypeInvalidDate   IssueType = "invalid_date"
+	IssueTypeExpired       IssueType = "expired"        // Already expired (ERROR)
+	IssueTypeExpiringSoon  IssueType = "expiring_soon"  // Expiring within warning threshold (WARNING)
+	IssueTypeMissingReason IssueType = "missing_reason" // Missing justification (WARNING)
+	IssueTypeMissingDate   IssueType = "missing_date"   // No expiration date (ERROR)
+	IssueTypeInvalidDate   IssueType = "invalid_date"   // Unparseable date format (ERROR)
 )
 
 // Severity represents the severity of a validation issue

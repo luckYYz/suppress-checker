@@ -121,17 +121,18 @@ func setupAuditor() (interfaces.Auditor, error) {
 	auditorInstance := auditor.NewDefaultAuditor()
 
 	// Register scanners
-	tryviScanner := scanner.NewTryviScanner()
+	fileScanner := scanner.NewFileSystemScanner(nil) // Use default supported files
 	if len(checkExclude) > 0 {
-		tryviScanner.SetExcludePatterns(checkExclude)
+		fileScanner.SetExcludePatterns(checkExclude)
 	}
 	if len(checkInclude) > 0 {
-		tryviScanner.SetIncludePatterns(checkInclude)
+		fileScanner.SetIncludePatterns(checkInclude)
 	}
-	auditorInstance.RegisterScanner(tryviScanner)
+	auditorInstance.RegisterScanner(fileScanner)
 
 	// Register parsers
 	auditorInstance.RegisterParser(parser.NewTryviParser())
+	auditorInstance.RegisterParser(parser.NewOwaspParser())
 
 	// Register validators
 	auditorInstance.RegisterValidator(validator.NewExpiryValidator())
@@ -213,20 +214,46 @@ func printSummary(report interface{}) {
 		fmt.Printf("Issues found: %d\n", len(auditReport.Issues))
 
 		if auditReport.ErrorCount() > 0 {
-			PrintError(fmt.Sprintf("❌ %d error(s) found", auditReport.ErrorCount()))
+			PrintError(fmt.Sprintf("❌ %d CRITICAL error(s) found (expired suppressions, missing dates)", auditReport.ErrorCount()))
 		}
 
 		if auditReport.WarningCount() > 0 {
-			PrintWarning(fmt.Sprintf("⚠️  %d warning(s) found", auditReport.WarningCount()))
+			PrintWarning(fmt.Sprintf("⚠️  %d warning(s) found (expiring soon, missing reasons)", auditReport.WarningCount()))
 		}
 
 		if !auditReport.HasIssues() {
 			PrintSuccess("No issues found! All suppressions are up to date.")
 		} else {
-			fmt.Printf("\nIssue Details:\n")
+			// Group issues by severity
+			var errorIssues []models.ValidationIssue
+			var warningIssues []models.ValidationIssue
+
 			for _, issue := range auditReport.Issues {
-				fmt.Printf("  • %s: %s\n", issue.Suppression.Vulnerability, issue.Message)
-				fmt.Printf("    File: %s (line %d)\n", issue.Suppression.FilePath, issue.Suppression.LineNumber)
+				if issue.Severity == models.SeverityError {
+					errorIssues = append(errorIssues, issue)
+				} else if issue.Severity == models.SeverityWarning {
+					warningIssues = append(warningIssues, issue)
+				}
+			}
+
+			fmt.Printf("\nIssue Details:\n")
+
+			// Print errors first
+			if len(errorIssues) > 0 {
+				fmt.Printf("\nErrors:\n")
+				for _, issue := range errorIssues {
+					fmt.Printf("  • 🔴 %s: %s\n", issue.Suppression.Vulnerability, issue.Message)
+					fmt.Printf("    File: %s (line %d)\n", issue.Suppression.FilePath, issue.Suppression.LineNumber)
+				}
+			}
+
+			// Print warnings second
+			if len(warningIssues) > 0 {
+				fmt.Printf("\nWarnings:\n")
+				for _, issue := range warningIssues {
+					fmt.Printf("  • 🟡 %s: %s\n", issue.Suppression.Vulnerability, issue.Message)
+					fmt.Printf("    File: %s (line %d)\n", issue.Suppression.FilePath, issue.Suppression.LineNumber)
+				}
 			}
 		}
 

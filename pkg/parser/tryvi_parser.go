@@ -45,6 +45,7 @@ func (p *TryviParser) Parse(filePath string) (*models.SuppressionFile, error) {
 	for i := range suppressions {
 		suppressions[i].FilePath = filePath
 		suppressions[i].LineNumber = i + 1 // Approximate line number
+		suppressions[i].Format = "tryvi"
 	}
 
 	return &models.SuppressionFile{
@@ -95,6 +96,7 @@ func (p *TryviParser) ParseWithLineNumbers(filePath string) (*models.Suppression
 	// Add file path to each suppression
 	for i := range suppressions {
 		suppressions[i].FilePath = filePath
+		suppressions[i].Format = "tryvi"
 		if suppressions[i].LineNumber == 0 {
 			suppressions[i].LineNumber = i + 1 // Fallback to index-based line number
 		}

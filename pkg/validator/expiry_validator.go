@@ -74,7 +74,7 @@ func (v *ExpiryValidator) validateSuppression(suppression models.Suppression) []
 		issues = append(issues, models.ValidationIssue{
 			Type:        models.IssueTypeMissingReason,
 			Suppression: suppression,
-			Message:     "Missing suppression reason - please provide justification",
+			Message:     "Missing suppression reason",
 			Severity:    models.SeverityWarning,
 		})
 	}
@@ -84,7 +84,7 @@ func (v *ExpiryValidator) validateSuppression(suppression models.Suppression) []
 		issues = append(issues, models.ValidationIssue{
 			Type:        models.IssueTypeMissingDate,
 			Suppression: suppression,
-			Message:     "Missing ignoreUntil date - suppressions must have expiry dates",
+			Message:     "Missing expiration date",
 			Severity:    models.SeverityError,
 		})
 		return issues // Can't check expiry without date
@@ -96,7 +96,7 @@ func (v *ExpiryValidator) validateSuppression(suppression models.Suppression) []
 		issues = append(issues, models.ValidationIssue{
 			Type:        models.IssueTypeInvalidDate,
 			Suppression: suppression,
-			Message:     fmt.Sprintf("Invalid date format '%s': %v. Expected YYYY-MM-DD", suppression.IgnoreUntil, err),
+			Message:     fmt.Sprintf("Invalid date format '%s': %v", suppression.IgnoreUntil, err),
 			Severity:    models.SeverityError,
 		})
 		return issues
@@ -117,7 +117,7 @@ func (v *ExpiryValidator) validateSuppression(suppression models.Suppression) []
 	daysUntilExpiry := int(expiryDate.Sub(v.currentTime).Hours() / 24)
 	if daysUntilExpiry > 0 && daysUntilExpiry <= 30 {
 		issues = append(issues, models.ValidationIssue{
-			Type:        models.IssueTypeExpired, // We might want a new type for "expiring soon"
+			Type:        models.IssueTypeExpiringSoon,
 			Suppression: suppression,
 			Message:     fmt.Sprintf("Suppression expires in %d days (%s)", daysUntilExpiry, suppression.IgnoreUntil),
 			Severity:    models.SeverityWarning,
@@ -127,15 +127,21 @@ func (v *ExpiryValidator) validateSuppression(suppression models.Suppression) []
 	return issues
 }
 
-// parseDate parses a date string in YYYY-MM-DD format
+// parseDate parses a date string in various formats including OWASP ISO 8601
 func (v *ExpiryValidator) parseDate(dateStr string) (time.Time, error) {
+	// Clean the input
+	dateStr = strings.TrimSpace(dateStr)
+
 	// Try common date formats
 	formats := []string{
-		"2006-01-02",                // YYYY-MM-DD
+		"2006-01-02",                // YYYY-MM-DD (standard)
+		"2006-01-02Z",               // YYYY-MM-DDZ (OWASP date-only with UTC timezone)
+		"2006-01-02T15:04:05Z",      // YYYY-MM-DDTHH:MM:SSZ (ISO 8601 UTC)
+		"2006-01-02T15:04:05Z07:00", // YYYY-MM-DDTHH:MM:SS+HH:MM (RFC3339 full)
+		"2006-01-02T15:04:05",       // YYYY-MM-DDTHH:MM:SS (no timezone)
 		"2006/01/02",                // YYYY/MM/DD
 		"01/02/2006",                // MM/DD/YYYY
 		"02-01-2006",                // DD-MM-YYYY
-		"2006-01-02T15:04:05Z07:00", // RFC3339 (ISO 8601)
 	}
 
 	for _, format := range formats {
@@ -144,7 +150,7 @@ func (v *ExpiryValidator) parseDate(dateStr string) (time.Time, error) {
 		}
 	}
 
-	return time.Time{}, fmt.Errorf("unable to parse date '%s'. Expected format: YYYY-MM-DD", dateStr)
+	return time.Time{}, fmt.Errorf("unable to parse date '%s'. Expected formats: YYYY-MM-DD, YYYY-MM-DDZ, or YYYY-MM-DDTHH:MM:SSZ", dateStr)
 }
 
 // daysSinceExpiry calculates the number of days since a date has passed
